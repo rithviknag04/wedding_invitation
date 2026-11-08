@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prajwala & Shravan – Wedding</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Hind:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./src/styles.css">
+
+<!-- React 18 & Babel for instant standalone browser viewing -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+function App() {
+  const [page, setPage] = useState('welcome');
+  const [navOpen, setNavOpen] = useState(false);
+  const [envelopeState, setEnvelopeState] = useState({ open: false, out: false });
+  const [confetti, setConfetti] = useState([]);
+  
+  // Swipeable photo cards state
+  const [cards, setCards] = useState([
+    { id: 1, text: 'Photo 1 of both of you' },
+    { id: 2, text: 'Photo 2' },
+    { id: 3, text: 'Photo 3' },
+    { id: 4, text: 'Photo 4' }
+  ]);
+  const dragRef = useRef({ isDown: false, startX: 0, currentX: 0 });
+  const [topCardStyle, setTopCardStyle] = useState({});
+  const [isDragging, setIsDragging] = useState(false);
+  const [activeLightbox, setActiveLightbox] = useState(null);
+
+  const galleryPhotos = [
+    {
+      id: 1,
+      title: "The Engagement",
+      sub: "A promise of forever",
+      src: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      id: 2,
+      title: "Jaipur Sunset",
+      sub: "Golden hour memories",
+      src: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      id: 3,
+      title: "Pre-Wedding Stroll",
+      sub: "Walking together",
+      src: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      id: 4,
+      title: "Ring Ceremony",
+      sub: "Sealed with love",
+      src: "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      id: 5,
+      title: "Sangeet & Laughter",
+      sub: "Music and celebration",
+      src: "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      id: 6,
+      title: "Together Forever",
+      sub: "Two hearts, one soul",
+      src: "https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&w=800&q=80"
+    }
+  ];
+
+  // Sync with window.location.hash
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.slice(1);
+      const valid = ['welcome', 'home', 'story', 'details', 'gallery', 'family'];
+      const target = valid.includes(hash) ? hash : 'welcome';
+      setPage(target);
+      setNavOpen(false);
+      window.scrollTo(0, 0);
+
+      if (target !== 'home') {
+        setEnvelopeState({ open: false, out: false });
+      }
+    };
+
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
+  const navigateTo = (target) => {
+    window.location.hash = target;
+  };
+
+  const handleEnvelopeClick = () => {
+    if (envelopeState.open) return;
+    setEnvelopeState({ open: true, out: false });
+
+    setTimeout(() => {
+      setEnvelopeState({ open: true, out: true });
+      triggerBurst();
+    }, 750);
+  };
+
+  const triggerBurst = () => {
+    const petals = [];
+    for (let i = 0; i < 30; i++) {
+      const angle = Math.random() * 6.28;
+      const dist = 110 + Math.random() * 170;
+      petals.push({
+        id: Math.random(),
+        x: Math.cos(angle) * dist,
+        y: Math.sin(angle) * dist - 70,
+        bg: i % 3 ? '#c8942e' : '#e08a9a',
+        delay: Math.random() * 0.25
+      });
+    }
+    setConfetti(petals);
+    setTimeout(() => setConfetti([]), 2300);
+  };
+
+  const stackAngles = [0, -4, 3.5, -2.5];
+
+  const handlePointerDown = (e) => {
+    dragRef.current = {
+      isDown: true,
+      startX: e.clientX,
+      currentX: 0
+    };
+    setIsDragging(true);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!dragRef.current.isDown) return;
+    const dx = e.clientX - dragRef.current.startX;
+    dragRef.current.currentX = dx;
+    setTopCardStyle({
+      transform: `translateX(${dx}px) rotate(${dx / 18}deg)`
+    });
+  };
+
+  const handlePointerUp = () => {
+    if (!dragRef.current.isDown) return;
+    dragRef.current.isDown = false;
+    setIsDragging(false);
+    const dx = dragRef.current.currentX;
+
+    if (Math.abs(dx) > 70) {
+      setTopCardStyle({
+        transform: `translateX(${dx > 0 ? 140 : -140}%) rotate(${dx > 0 ? 25 : -25}deg)`,
+        opacity: 0,
+        transition: 'transform 0.4s ease, opacity 0.4s ease'
+      });
+      setTimeout(() => {
+        setCards(prev => {
+          const next = [...prev];
+          next.push(next.shift());
+          return next;
+        });
+        setTopCardStyle({});
+      }, 420);
+    } else {
+      setTopCardStyle({});
+    }
+  };
+
+  return (
+    <div>
+      {/* Navbar */}
+      <nav className="navbar navbar-expand-md sticky-top" aria-label="Pages">
+        <div className="container">
+          <a className="navbar-brand" href="#welcome" onClick={(e) => { e.preventDefault(); navigateTo('welcome'); }}>
+            P & S
+          </a>
+          <button
+            className="navbar-toggler"
+            type="button"
+            aria-label="Toggle menu"
+            onClick={() => setNavOpen(!navOpen)}
+          >
+            <span className="navbar-toggler-icon"></span>
+          </button>
+          <div className={`collapse navbar-collapse ${navOpen ? 'show' : ''}`} id="nv">
+            <ul className="navbar-nav ms-auto">
+              <li className="nav-item">
+                <a
+                  className={`nav-link ${page === 'home' ? 'active' : ''}`}
+                  href="#home"
+                  onClick={(e) => { e.preventDefault(); navigateTo('home'); }}
+                >
+                  Invitation
+                </a>
+              </li>
+              <li className="nav-item">
+                <a
+                  className={`nav-link ${page === 'story' ? 'active' : ''}`}
+                  href="#story"
+                  onClick={(e) => { e.preventDefault(); navigateTo('story'); }}
+                >
+                  Our story
+                </a>
+              </li>
+              <li className="nav-item">
+                <a
+                  className={`nav-link ${page === 'details' ? 'active' : ''}`}
+                  href="#details"
+                  onClick={(e) => { e.preventDefault(); navigateTo('details'); }}
+                >
+                  Details
+                </a>
+              </li>
+              <li className="nav-item">
+                <a
+                  className={`nav-link ${page === 'gallery' ? 'active' : ''}`}
+                  href="#gallery"
+                  onClick={(e) => { e.preventDefault(); navigateTo('gallery'); }}
+                >
+                  Gallery
+                </a>
+              </li>
+              <li className="nav-item">
+                <a
+                  className={`nav-link ${page === 'family' ? 'active' : ''}`}
+                  href="#family"
+                  onClick={(e) => { e.preventDefault(); navigateTo('family'); }}
+                >
+                  Family
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+
+      <main className="container">
+        {/* 1. WELCOME PAGE */}
+        {page === 'welcome' && (
+          <section className="pg cv" id="p-welcome">
+            {Array.from({ length: 16 }).map((_, i) => (
+              <span
+                key={i}
+                className="sp"
+                style={{
+                  left: `${(i * 19) % 100}%`,
+                  width: `${6 + (i % 6)}px`,
+                  height: `${6 + (i % 6)}px`,
+                  animationDuration: `${7 + (i % 7)}s`,
+                  animationDelay: `${-(i * 1.2)}s`
+                }}
+              />
+            ))}
+
+            <div className="duo">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <span
+                  key={i}
+                  className="tw"
+                  style={{
+                    left: `${(i * 23) % 100}%`,
+                    top: `${(i * 31) % 100}%`,
+                    fontSize: `${10 + (i % 12)}px`,
+                    animationDelay: `${(i * 0.4) % 2.4}s`
+                  }}
+                >
+                  ✦
+                </span>
+              ))}
+
+              <figure className="ph">
+                <div className="img">Bride’s photo</div>
+                <figcaption>Prajwala</figcaption>
+              </figure>
+              <div className="amp">&</div>
+              <figure className="ph r">
+                <div className="img">Groom’s photo</div>
+                <figcaption>Shravan</figcaption>
+              </figure>
+            </div>
+
+            <p className="t big" style={{ animationDelay: '1.7s' }}>are getting married</p>
+            <p className="t" style={{ animationDelay: '2s' }}>Sunday, 14 February 2027</p>
+            <p className="t" style={{ animationDelay: '2.4s' }}>Scroll down</p>
+
+            <section className="tg">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <span
+                  key={i}
+                  className="ht"
+                  style={{
+                    left: `${(i * 27) % 100}%`,
+                    fontSize: `${12 + (i % 12)}px`,
+                    animationDuration: `${6 + (i % 5)}s`,
+                    animationDelay: `${-(i * 1.5)}s`
+                  }}
+                >
+                  ♥
+                </span>
+              ))}
+
+              <h2 className="sr">Two hearts, one story</h2>
+              <div className="tgw sr">
+                <div
+                  className="stk"
+                  id="stk"
+                  aria-label="Photos of Prajwala and Shravan. Swipe to see more."
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onPointerCancel={handlePointerUp}
+                >
+                  {cards.map((card, i) => {
+                    const depth = Math.min(i, 3);
+                    const defaultTransform = `translateY(${depth * 14}px) scale(${1 - depth * 0.05}) rotate(${stackAngles[depth]}deg)`;
+                    const style = i === 0 && (isDragging || topCardStyle.transform)
+                      ? {
+                          zIndex: cards.length,
+                          opacity: 1,
+                          pointerEvents: 'auto',
+                          ...topCardStyle
+                        }
+                      : {
+                          zIndex: cards.length - i,
+                          opacity: i > 3 ? 0 : 1,
+                          transform: defaultTransform,
+                          pointerEvents: i === 0 ? 'auto' : 'none'
+                        };
+
+                    return (
+                      <div
+                        key={card.id}
+                        className={`pc ${i === 0 && isDragging ? 'drag' : ''}`}
+                        style={style}
+                      >
+                        {card.text}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <p className="sr" style={{ fontSize: '.9rem', opacity: .8, marginTop: '44px' }}>Swipe the photos</p>
+              <p className="sr big" style={{ marginTop: '24px' }}>Prajwala & Shravan</p>
+              <p className="sr">14 February 2027</p>
+              <a
+                className="btn btn-wed sr"
+                href="#home"
+                onClick={(e) => { e.preventDefault(); navigateTo('home'); }}
+              >
+                Open the invitation
+              </a>
+            </section>
+          </section>
+        )}
+
+        {/* 2. INVITATION & ENVELOPE (HOME) */}
+        {page === 'home' && (
+          <section
+            className={`pg ${envelopeState.open ? 'open' : ''} ${envelopeState.out ? 'out' : ''}`}
+            id="p-home"
+            style={{ textAlign: 'center' }}
+          >
+            {Array.from({ length: 14 }).map((_, i) => (
+              <span
+                key={i}
+                className="sp"
+                style={{
+                  left: `${(i * 21) % 100}%`,
+                  width: `${5 + (i % 7)}px`,
+                  height: `${5 + (i % 7)}px`,
+                  animationDuration: `${7 + (i % 7)}s`,
+                  animationDelay: `${-(i * 1.4)}s`
+                }}
+              />
+            ))}
+
+            <div className="par" id="par">
+              <p>With the blessings of</p>
+              <small>Parents of Prajwala</small>
+              <p className="pn">Mr. [Father’s name] & Mrs. [Mother’s name]</p>
+              <small>Parents of Shravan</small>
+              <p className="pn">Mr. [Father’s name] & Mrs. [Mother’s name]</p>
+            </div>
+
+            <div className="stage">
+              <div className="envwrap">
+                <button
+                  className={`env ${envelopeState.open ? 'open' : ''}`}
+                  id="ev"
+                  aria-label="Open the invitation"
+                  onClick={handleEnvelopeClick}
+                >
+                  <b>P&S</b>
+                </button>
+                <p className="hint" id="hint">Tap the seal to open your invitation</p>
+              </div>
+
+              <div className="paper" id="card">
+                <p style={{ '--d': '0.55s' }}>With the blessings of our families</p>
+                <h1 style={{ '--d': '0.68s' }}>Prajwala <i>and</i> Shravan</h1>
+                <p style={{ '--d': '0.81s' }}>invite you to celebrate their wedding</p>
+                <hr style={{ '--d': '0.94s' }} />
+                <p className="big" style={{ '--d': '1.07s' }}>Sunday, 14 February 2027</p>
+                <p style={{ '--d': '1.20s' }}>10:30 am</p>
+                <p style={{ '--d': '1.33s' }}>Mandap Lawn, Hotel Aravali, Jaipur</p>
+                <a
+                  className="btn btn-wed"
+                  href="#details"
+                  style={{ '--d': '1.46s' }}
+                  onClick={(e) => { e.preventDefault(); navigateTo('details'); }}
+                >
+                  See all details
+                </a>
+              </div>
+
+              {confetti.map(p => (
+                <span
+                  key={p.id}
+                  className="pt"
+                  style={{
+                    '--x': `${p.x}px`,
+                    '--y': `${p.y}px`,
+                    background: p.bg,
+                    animationDelay: `${p.delay}s`
+                  }}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 3. OUR STORY */}
+        {page === 'story' && (
+          <section className="pg" id="p-story">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <span
+                key={i}
+                className="sp"
+                style={{
+                  left: `${(i * 29) % 100}%`,
+                  width: `${5 + (i % 6)}px`,
+                  height: `${5 + (i % 6)}px`,
+                  animationDuration: `${6 + (i % 6)}s`,
+                  animationDelay: `${-(i * 1.5)}s`
+                }}
+              />
+            ))}
+            <div className="paper">
+              <h2>Our story</h2>
+              <p className="note">Replace these lines with your sister’s own words.</p>
+              <ol className="tl" data-stagger>
+                <li style={{ animationDelay: '0.35s' }}>
+                  <h3>2019 · We met</h3>
+                  <p>A short line about how they first met goes here.</p>
+                </li>
+                <li style={{ animationDelay: '0.49s' }}>
+                  <h3>2025 · The proposal</h3>
+                  <p>A short line about the moment he asked goes here.</p>
+                </li>
+                <li style={{ animationDelay: '0.63s' }}>
+                  <h3>14 February 2027 · The wedding</h3>
+                  <p>Two families become one. We would love for you to be there.</p>
+                </li>
+              </ol>
+            </div>
+          </section>
+        )}
+
+        {/* 4. DETAILS */}
+        {page === 'details' && (
+          <section className="pg" id="p-details">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <span
+                key={i}
+                className="sp"
+                style={{
+                  left: `${(i * 29) % 100}%`,
+                  width: `${5 + (i % 6)}px`,
+                  height: `${5 + (i % 6)}px`,
+                  animationDuration: `${6 + (i % 6)}s`,
+                  animationDelay: `${-(i * 1.5)}s`
+                }}
+              />
+            ))}
+            <div className="paper">
+              <h2>Wedding details</h2>
+              <div className="list-group list-group-flush rows" data-stagger>
+                <div className="list-group-item" style={{ animationDelay: '0.35s' }}>
+                  <b>Date and time</b>Sunday, 14 February 2027, 10:30 am
+                </div>
+                <div className="list-group-item" style={{ animationDelay: '0.49s' }}>
+                  <b>Venue</b>Mandap Lawn, Hotel Aravali, Civil Lines, Jaipur<br />
+                  <span className="note">A map link can go here.</span>
+                </div>
+                <div className="list-group-item" style={{ animationDelay: '0.63s' }}>
+                  <b>Getting there</b>Parking is available at the main gate. A shuttle runs from the city centre every hour on the wedding day.
+                </div>
+                <div className="list-group-item" style={{ animationDelay: '0.77s' }}>
+                  <b>Where to stay</b>Rooms are held for guests at Hotel Aravali. Please mention the wedding when booking.
+                </div>
+                <div className="list-group-item" style={{ animationDelay: '0.91s' }}>
+                  <b>Dress code</b>Traditional attire is most welcome.
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 5. ENHANCED GALLERY WITH LIGHTBOX */}
+        {page === 'gallery' && (
+          <section className="pg" id="p-gallery">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <span
+                key={i}
+                className="sp"
+                style={{
+                  left: `${(i * 29) % 100}%`,
+                  width: `${5 + (i % 6)}px`,
+                  height: `${5 + (i % 6)}px`,
+                  animationDuration: `${6 + (i % 6)}s`,
+                  animationDelay: `${-(i * 1.5)}s`
+                }}
+              />
+            ))}
+            <div className="paper">
+              <h2>Gallery</h2>
+              <p className="note">Tap any photo to view in high definition</p>
+              
+              <div className="gallery-grid">
+                {galleryPhotos.map((photo, idx) => (
+                  <div
+                    key={photo.id}
+                    className="gallery-card"
+                    onClick={() => setActiveLightbox(idx)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter') setActiveLightbox(idx); }}
+                  >
+                    <div className="gallery-img-wrap">
+                      <img src={photo.src} alt={photo.title} loading="lazy" />
+                    </div>
+                    <div className="gallery-card-badge">
+                      {photo.title}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p className="note" style={{ marginTop: '22px' }}>
+                Cherished moments leading to our special day
+              </p>
+            </div>
+          </section>
+        )}
+
+        {/* 6. THE FAMILIES */}
+        {page === 'family' && (
+          <section className="pg" id="p-family">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <span
+                key={i}
+                className="sp"
+                style={{
+                  left: `${(i * 29) % 100}%`,
+                  width: `${5 + (i % 6)}px`,
+                  height: `${5 + (i % 6)}px`,
+                  animationDuration: `${6 + (i % 6)}s`,
+                  animationDelay: `${-(i * 1.5)}s`
+                }}
+              />
+            ))}
+            <div className="paper">
+              <h2>The families</h2>
+              <div className="list-group list-group-flush rows" data-stagger>
+                <div className="list-group-item" style={{ animationDelay: '0.35s' }}>
+                  <b>Family of Prajwala</b>Parents’ names and family members go here.
+                </div>
+                <div className="list-group-item" style={{ animationDelay: '0.49s' }}>
+                  <b>Family of Shravan</b>Parents’ names and family members go here.
+                </div>
+                <div className="list-group-item" style={{ animationDelay: '0.63s' }}>
+                  <b>Questions?</b>Please call [contact name] at +91 00000 00000.
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+      </main>
+
+      <footer>
+        Prajwala & Shravan, 14 February 2027
+      </footer>
+
+      {/* Lightbox Modal */}
+      {activeLightbox !== null && (
+        <div
+          className="lightbox-backdrop"
+          onClick={() => setActiveLightbox(null)}
+        >
+          <div
+            className="lightbox-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="lightbox-close"
+              aria-label="Close"
+              onClick={() => setActiveLightbox(null)}
+            >
+              ✕
+            </button>
+            <div className="lightbox-img-area">
+              <img
+                src={galleryPhotos[activeLightbox].src}
+                alt={galleryPhotos[activeLightbox].title}
+              />
+            </div>
+            <div className="lightbox-title">
+              {galleryPhotos[activeLightbox].title}
+            </div>
+            <div className="lightbox-counter">
+              {galleryPhotos[activeLightbox].sub} • {activeLightbox + 1} of {galleryPhotos.length}
+            </div>
+            <div className="lightbox-nav">
+              <button
+                className="lightbox-btn"
+                onClick={() =>
+                  setActiveLightbox((activeLightbox - 1 + galleryPhotos.length) % galleryPhotos.length)
+                }
+              >
+                ‹ Previous
+              </button>
+              <button
+                className="lightbox-btn"
+                onClick={() =>
+                  setActiveLightbox((activeLightbox + 1) % galleryPhotos.length)
+                }
+              >
+                Next ›
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
+
